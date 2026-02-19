@@ -150,6 +150,17 @@ app.use(
 // Configure JSON body parser
 app.use(express.json());
 
+// Health check endpoint
+app.get("/", (_req: Request, res: Response) => {
+  res.json({
+    status: "ok",
+    message: "Video Management API is running",
+    endpoints: {
+      videos: "/api/videos",
+    },
+  });
+});
+
 // Register video routes at /api/videos
 app.use("/api/videos", videoRoutes);
 

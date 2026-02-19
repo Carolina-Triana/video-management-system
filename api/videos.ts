@@ -9,7 +9,18 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Updated: 2024-12-19 - Now accepts JSON with thumbnailUrl instead of file upload
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
-  res.setHeader("Access-Control-Allow-Origin", process.env.CORS_ORIGIN || "*");
+  const allowedOrigins = [
+    "https://carolina-triana.github.io",
+    process.env.CORS_ORIGIN,
+  ].filter(Boolean);
+
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.some((allowed) => origin.startsWith(allowed))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  }
+
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-key");
 

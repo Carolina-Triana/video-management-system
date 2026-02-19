@@ -78,12 +78,96 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(401).json({ error: "Invalid or missing API key" });
       }
 
-      // Note: File upload not supported in this serverless version
-      // This would need to be handled differently (e.g., presigned URLs)
-      return res.status(501).json({
-        error:
-          "File upload not supported in serverless version. Use presigned URLs instead.",
-      });
+      try {
+        const { title, iframeEmbed, tags, thumbnailUrl } = req.body;
+
+        // Validate required fields
+        if (!title || !iframeEmbed || !thumbnailUrl) {
+          return res.status(400).json({
+            error: "Missing required fields: title, iframeEmbed, thumbnailUrl",
+          });
+        }
+
+        // Validate title
+        if (title.trim().length < 3) {
+          return res.status(400).json({
+            error: "Title must be at least 3 characters long",
+          });
+        }
+
+        // Validate iframe embed
+        const embedLower = iframeEmbed.toLowerCase();
+        if (!embedLower.includes("<iframe") || !embedLower.includes("src=")) {
+          return res.status(400).json({
+            error:
+              "iframeEmbed must contain an <iframe> tag with src attribute",
+          });
+        }
+
+        // Check for javascript: protocol
+        if (embedLower.includes("javascript:")) {
+          return res.status(400).json({
+            error: "Invalid iframe: javascript: protocol not allowed",
+          });
+        }
+
+        // Validate tags
+        const tagsArray = Array.isArray(tags) ? tags : [];
+        if (tagsArray.length > 10) {
+          return res.status(400).json({
+            error: "Maximum of 10 tags allowed",
+          });
+        }
+
+        // Sanitize iframe embed (remove script tags)
+        const sanitizedEmbed = iframeEmbed.replace(
+          /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+          "",
+        );
+
+        // Generate video ID
+        const chars =
+          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let videoId = "v_";
+        for (let i = 0; i < 8; i++) {
+          videoId += chars[Math.floor(Math.random() * chars.length)];
+        }
+
+        const createdAt = new Date().toISOString();
+
+        // Insert into database
+        const { data, error: insertError } = await supabase
+          .from("videos")
+          .insert({
+            id: videoId,
+            title: title.trim(),
+            thumbnail_url: thumbnailUrl,
+            iframe_embed: sanitizedEmbed,
+            tags: tagsArray,
+            created_at: createdAt,
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        // Return created video
+        const video = {
+          id: data.id,
+          title: data.title,
+          thumbnailUrl: data.thumbnail_url,
+          iframeEmbed: data.iframe_embed,
+          tags: data.tags || [],
+          createdAt: data.created_at,
+        };
+
+        return res.status(201).json(video);
+      } catch (error: any) {
+        console.error("Error creating video:", error);
+        return res
+          .status(500)
+          .json({ error: error.message || "Failed to create video" });
+      }
     }
 
     // DELETE /api/videos/:id - Delete video (requires admin key)

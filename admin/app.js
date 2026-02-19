@@ -1,33 +1,61 @@
 // Configuration
 const config = {
   apiUrl: "https://video-management-system-rose.vercel.app/api/videos",
-  apiKey: "F1OnCPnluGAraq23EJRM29EKHL/yg5XN457umks0EbM=", // Production API key
+  apiKey: "F1OnCPnluGAraq23EJRM29EKHL/yg5XN457umks0EbM=",
+  supabaseUrl: "https://cxntpvlfdplarpgkftvm.supabase.co",
+  supabaseAnonKey: "sb_publishable_TZ1KMuVU9YFdq0ciQNLn4Q_ZkqCaI7-",
 };
 
-// IMPORTANT NOTE: The serverless version on Vercel does NOT support file uploads (POST /api/videos)
-// File uploads require either:
-// 1. Using Supabase presigned URLs for direct client-side uploads
-// 2. Deploying the full Express backend to a traditional server (Railway, Render, etc.)
-//
-// Currently only GET and DELETE operations work on Vercel.
-// For creating videos with thumbnails, you need to run the backend locally or deploy to a traditional server.
+// Initialize Supabase client
+const { createClient } = supabase;
+const supabaseClient = createClient(config.supabaseUrl, config.supabaseAnonKey);
 
-/**
- * Create a new video by posting FormData to the API
- * @param {FormData} formData - The form data containing video information and thumbnail
- * @returns {Promise<Object>} The created video object
- * @throws {Error} If the API request fails
- */
-async function createVideo(formData) {
+// Generate video ID
+function generateVideoId() {
+  const chars =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let id = "v_";
+  for (let i = 0; i < 8; i++) {
+    id += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return id;
+}
+
+// Upload thumbnail to Supabase Storage
+async function uploadThumbnail(file, videoId) {
+  const timestamp = Date.now();
+  const extension = file.name.split(".").pop() || "jpg";
+  const filename = `${videoId}_${timestamp}.${extension}`;
+
+  const { data, error } = await supabaseClient.storage
+    .from("thumbnails")
+    .upload(filename, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(`Failed to upload thumbnail: ${error.message}`);
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabaseClient.storage.from("thumbnails").getPublicUrl(data.path);
+
+  return publicUrl;
+}
+
+// Create video via API
+async function createVideo(videoData) {
   const response = await fetch(config.apiUrl, {
     method: "POST",
     headers: {
+      "Content-Type": "application/json",
       "x-admin-key": config.apiKey,
     },
-    body: formData,
+    body: JSON.stringify(videoData),
   });
 
-  // Handle error responses
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(
@@ -35,12 +63,10 @@ async function createVideo(formData) {
     );
   }
 
-  // Handle success response
-  const video = await response.json();
-  return video;
+  return await response.json();
 }
 
-// Get references to form elements
+// Get form elements
 const form = document.getElementById("videoForm");
 const titleInput = document.getElementById("title");
 const tagsInput = document.getElementById("tags");
@@ -48,66 +74,67 @@ const iframeEmbedTextarea = document.getElementById("iframeEmbed");
 const thumbnailInput = document.getElementById("thumbnail");
 const submitButton = document.getElementById("submitButton");
 
-// Add submit event listener to form
+// Form submit handler
 form.addEventListener("submit", async (event) => {
-  // Prevent default form submission
   event.preventDefault();
-
-  // Log "admin_submit_attempt" to console
   console.log("admin_submit_attempt");
 
-  // Construct FormData with all form field values
-  const formData = new FormData();
-  formData.append("title", titleInput.value);
-  formData.append("iframeEmbed", iframeEmbedTextarea.value);
-
-  // Parse tags from comma-separated string
-  const tagsValue = tagsInput.value.trim();
-  formData.append("tags", tagsValue);
-
-  // Add thumbnail file
-  if (thumbnailInput.files.length > 0) {
-    formData.append("thumbnail", thumbnailInput.files[0]);
-  }
-
-  // Disable submit button during submission
   submitButton.disabled = true;
-  submitButton.textContent = "Creating...";
+  submitButton.textContent = "Uploading thumbnail...";
 
-  // Send FormData to API
   try {
-    const video = await createVideo(formData);
+    // Validate thumbnail
+    if (thumbnailInput.files.length === 0) {
+      throw new Error("Please select a thumbnail image");
+    }
 
-    // On success (201): Display success message, log "admin_submit_success" with video ID, clear form
+    // Generate video ID
+    const videoId = generateVideoId();
+
+    // Upload thumbnail to Supabase Storage
+    const thumbnailUrl = await uploadThumbnail(
+      thumbnailInput.files[0],
+      videoId,
+    );
+
+    submitButton.textContent = "Creating video...";
+
+    // Parse tags
+    const tagsValue = tagsInput.value.trim();
+    const tagsArray = tagsValue
+      ? tagsValue
+          .split(",")
+          .map((t) => t.trim())
+          .filter((t) => t.length > 0)
+      : [];
+
+    // Create video via API
+    const video = await createVideo({
+      title: titleInput.value,
+      iframeEmbed: iframeEmbedTextarea.value,
+      tags: tagsArray,
+      thumbnailUrl: thumbnailUrl,
+    });
+
     console.log("admin_submit_success", { videoId: video.id });
     displayMessage(`Video created successfully! ID: ${video.id}`, "success");
-
-    // Clear form
     form.reset();
   } catch (error) {
-    // On error (4xx/5xx): Display error message, log "admin_submit_error" with error message
     console.log("admin_submit_error", { error: error.message });
     displayMessage(`Error: ${error.message}`, "error");
   } finally {
-    // Re-enable submit button
     submitButton.disabled = false;
     submitButton.textContent = "Create Video";
   }
 });
 
-/**
- * Display a message in the message area with appropriate styling
- * @param {string} message - The message to display
- * @param {string} type - The type of message: "success" or "error"
- */
+// Display message
 function displayMessage(message, type) {
   const messageArea = document.getElementById("messageArea");
   const messageContent = document.getElementById("messageContent");
 
-  // Update message content
   messageContent.textContent = message;
 
-  // Apply appropriate styling based on type
   if (type === "success") {
     messageContent.className =
       "p-4 rounded-lg bg-green-500/20 border border-green-500/50 text-green-200";
@@ -116,10 +143,8 @@ function displayMessage(message, type) {
       "p-4 rounded-lg bg-red-500/20 border border-red-500/50 text-red-200";
   }
 
-  // Show message area
   messageArea.classList.remove("hidden");
 
-  // Auto-hide success messages after 5 seconds
   if (type === "success") {
     setTimeout(() => {
       messageArea.classList.add("hidden");

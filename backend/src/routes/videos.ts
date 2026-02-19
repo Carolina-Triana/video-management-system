@@ -75,7 +75,10 @@ router.get("/:id", async (req: Request, res: Response) => {
 
 /**
  * POST /api/videos
- * Create a new video record with thumbnail upload
+ * Create a new video record with thumbnail upload OR thumbnailUrl
+ * Supports two modes:
+ * 1. multipart/form-data with file upload (original)
+ * 2. application/json with thumbnailUrl (new - for Vercel serverless)
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.2
  */
 router.post(
@@ -84,12 +87,14 @@ router.post(
   upload.single("thumbnail"),
   async (req: Request, res: Response) => {
     try {
-      const { title, iframeEmbed, tags } = req.body;
+      const { title, iframeEmbed, tags, thumbnailUrl } = req.body;
       const file = req.file;
 
-      // Validate required fields
-      if (!file) {
-        res.status(400).json({ error: "Thumbnail file is required" });
+      // Check if we have either file OR thumbnailUrl
+      if (!file && !thumbnailUrl) {
+        res
+          .status(400)
+          .json({ error: "Either thumbnail file or thumbnailUrl is required" });
         return;
       }
 
@@ -110,10 +115,15 @@ router.post(
       // Parse and validate tags
       let tagsArray: string[] = [];
       if (tags) {
-        tagsArray = tags
-          .split(",")
-          .map((tag: string) => tag.trim())
-          .filter((tag: string) => tag.length > 0);
+        // Handle both string (from form) and array (from JSON)
+        if (typeof tags === "string") {
+          tagsArray = tags
+            .split(",")
+            .map((tag: string) => tag.trim())
+            .filter((tag: string) => tag.length > 0);
+        } else if (Array.isArray(tags)) {
+          tagsArray = tags;
+        }
 
         const tagsValidation = validateTags(tagsArray);
         if (!tagsValidation.valid) {
@@ -127,12 +137,10 @@ router.post(
       try {
         sanitizedEmbed = sanitizeIframeEmbed(iframeEmbed);
       } catch (error) {
-        res
-          .status(400)
-          .json({
-            error:
-              error instanceof Error ? error.message : "Invalid iframe embed",
-          });
+        res.status(400).json({
+          error:
+            error instanceof Error ? error.message : "Invalid iframe embed",
+        });
         return;
       }
 
@@ -140,21 +148,29 @@ router.post(
       const videoId = generateVideoId();
       const createdAt = new Date().toISOString();
 
-      // Upload thumbnail
-      const thumbnailFilename = generateThumbnailFilename(
-        videoId,
-        file.originalname,
-      );
-      const thumbnailUrl = await uploadThumbnail(
-        file.buffer,
-        thumbnailFilename,
-      );
+      // Get thumbnail URL (either upload file or use provided URL)
+      let finalThumbnailUrl: string;
+
+      if (file) {
+        // Mode 1: File upload (original behavior)
+        const thumbnailFilename = generateThumbnailFilename(
+          videoId,
+          file.originalname,
+        );
+        finalThumbnailUrl = await uploadThumbnail(
+          file.buffer,
+          thumbnailFilename,
+        );
+      } else {
+        // Mode 2: Use provided thumbnailUrl (new behavior for Vercel)
+        finalThumbnailUrl = thumbnailUrl;
+      }
 
       // Create video record
       const video = await createVideo({
         id: videoId,
         title: title.trim(),
-        thumbnailUrl,
+        thumbnailUrl: finalThumbnailUrl,
         iframeEmbed: sanitizedEmbed,
         tags: tagsArray,
         createdAt,

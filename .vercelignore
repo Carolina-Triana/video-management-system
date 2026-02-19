@@ -1,0 +1,6 @@
+backend/
+admin/
+.kiro/
+.vscode/
+.git/
+*.md

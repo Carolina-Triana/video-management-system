@@ -4,3 +4,5 @@ admin/
 .vscode/
 .git/
 *.md
+node_modules/
+dist/

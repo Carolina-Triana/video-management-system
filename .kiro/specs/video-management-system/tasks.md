@@ -1,0 +1,228 @@
+# Implementation Plan: Video Management System
+
+## Overview
+
+This implementation plan breaks down the video management system into discrete coding tasks. The system consists of a Node.js/TypeScript backend API and a vanilla JavaScript admin interface. Tasks are organized to build incrementally, with testing integrated throughout.
+
+## Tasks
+
+- [x] 1. Initialize project structure and dependencies
+  - Create backend/ directory with src/ subdirectory
+  - Create admin/ directory
+  - Initialize package.json with TypeScript, Express, Supabase, multer, cors, dotenv
+  - Set up tsconfig.json for TypeScript compilation
+  - Create .env.example with required environment variables
+  - Create .gitignore for node_modules, .env, dist/
+  - _Requirements: 10.1, 10.4_
+
+- [ ] 2. Set up Supabase service layer
+  - [x] 2.1 Create services/supabase.ts with Supabase client initialization
+    - Initialize Supabase client with URL and anon key from environment
+    - Export configured client instance
+    - _Requirements: 6.4_
+  - [x] 2.2 Implement database operations in Supabase service
+    - Implement getAllVideos() to query videos table sorted by created_at DESC
+    - Implement getVideoById(id) to query single video by ID
+    - Implement createVideo(data) to insert new video record
+    - Implement deleteVideo(id) to delete video by ID
+    - _Requirements: 1.1, 1.2, 2.1, 5.1_
+  - [x] 2.3 Implement storage operations in Supabase service
+    - Implement uploadThumbnail(file, filename) to upload to thumbnails bucket
+    - Implement deleteThumbnail(url) to remove file from storage
+    - Generate unique filenames using video ID and timestamp
+    - _Requirements: 2.4, 5.2_
+  - [ ]\* 2.4 Write property test for video creation and retrieval round-trip
+    - **Property 2: Video creation and retrieval round-trip**
+    - **Validates: Requirements 1.2, 2.1**
+  - [ ]\* 2.5 Write property test for video retrieval sorting
+    - **Property 1: Video retrieval sorting**
+    - **Validates: Requirements 1.1**
+
+- [ ] 3. Implement validation and sanitization utilities
+  - [x] 3.1 Create utils/validators.ts with validation functions
+    - Implement validateTitle(title) - check min 3 characters and required
+    - Implement validateIframeEmbed(embed) - check contains "<iframe" and "src="
+    - Implement validateTags(tags) - check max 10 tags
+    - Implement sanitizeIframeEmbed(embed) - strip script tags, reject javascript:
+    - Return ValidationResult objects with valid boolean and error message
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2_
+  - [ ]\* 3.2 Write property test for title length validation
+    - **Property 9: Title length validation**
+    - **Validates: Requirements 3.1**
+  - [ ]\* 3.3 Write property test for required fields validation
+    - **Property 10: Required fields validation**
+    - **Validates: Requirements 3.2, 3.3, 3.6**
+  - [ ]\* 3.4 Write property test for iframe embed format validation
+    - **Property 11: Iframe embed format validation**
+    - **Validates: Requirements 3.4**
+  - [ ]\* 3.5 Write property test for tag count limit enforcement
+    - **Property 12: Tag count limit enforcement**
+    - **Validates: Requirements 3.5**
+  - [ ]\* 3.6 Write property test for script tag sanitization
+    - **Property 13: Script tag sanitization**
+    - **Validates: Requirements 4.1**
+  - [ ]\* 3.7 Write property test for javascript protocol rejection
+    - **Property 14: JavaScript protocol rejection**
+    - **Validates: Requirements 4.2**
+
+- [ ] 4. Implement authentication middleware
+  - [x] 4.1 Create middleware/auth.ts with API key validation
+    - Implement requireAdminKey middleware function
+    - Check x-admin-key header against ADMIN_API_KEY environment variable
+    - Return 401 error if missing or invalid
+    - Call next() if valid
+    - _Requirements: 2.6, 4.3, 5.3_
+  - [ ]\* 4.2 Write property test for authentication enforcement
+    - **Property 8: Authentication enforcement**
+    - **Validates: Requirements 2.6, 4.3, 5.3**
+
+- [ ] 5. Implement video ID generation utility
+  - [x] 5.1 Create utils/idGenerator.ts with generateVideoId function
+    - Generate "v\_" prefix followed by 8 random alphanumeric characters
+    - Use cryptographically secure random generation
+    - _Requirements: 2.2_
+  - [ ]\* 5.2 Write property test for video ID format validation
+    - **Property 4: Video ID format validation**
+    - **Validates: Requirements 2.2**
+  - [ ]\* 5.3 Write unit test for ID uniqueness
+    - Generate 1000 IDs and verify no duplicates
+    - _Requirements: 2.2_
+
+- [ ] 6. Implement video routes
+  - [x] 6.1 Create routes/videos.ts with route handlers
+    - Implement GET /api/videos handler - call getAllVideos from service
+    - Implement GET /api/videos/:id handler - call getVideoById, return 404 if not found
+    - Implement POST /api/videos handler with multer middleware for file upload
+    - Implement DELETE /api/videos/:id handler - call deleteVideo and deleteThumbnail
+    - Apply requireAdminKey middleware to POST and DELETE routes
+    - _Requirements: 1.1, 1.2, 1.3, 2.1, 5.1, 5.2, 5.4, 5.5_
+  - [x] 6.2 Implement POST /api/videos request handling logic
+    - Extract title, iframeEmbed, tags from request body
+    - Parse tags from comma-separated string to array
+    - Validate all inputs using validator functions
+    - Sanitize iframeEmbed
+    - Generate video ID and createdAt timestamp
+    - Upload thumbnail file to Supabase Storage
+    - Create video record in database
+    - Return created video with 201 status
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.2_
+  - [ ]\* 6.3 Write property test for invalid ID returns 404
+    - **Property 3: Invalid ID returns 404**
+    - **Validates: Requirements 1.3, 5.4**
+  - [ ]\* 6.4 Write property test for timestamp format validation
+    - **Property 5: Timestamp format validation**
+    - **Validates: Requirements 2.3**
+  - [ ]\* 6.5 Write property test for thumbnail upload and accessibility
+    - **Property 6: Thumbnail upload and accessibility**
+    - **Validates: Requirements 2.4**
+  - [ ]\* 6.6 Write property test for tag parsing consistency
+    - **Property 7: Tag parsing consistency**
+    - **Validates: Requirements 2.5**
+  - [ ]\* 6.7 Write property test for video deletion completeness
+    - **Property 15: Video deletion completeness**
+    - **Validates: Requirements 5.1, 5.2, 5.5**
+
+- [ ] 7. Set up Express application
+  - [x] 7.1 Create app.ts with Express server configuration
+    - Initialize Express app
+    - Configure CORS middleware with origin from environment
+    - Configure JSON body parser
+    - Register video routes at /api/videos
+    - Add error handling middleware
+    - Start server on PORT from environment
+    - _Requirements: 1.4, 10.5_
+  - [ ]\* 7.2 Write unit test for CORS headers
+    - Verify CORS headers are present in responses
+    - _Requirements: 1.4_
+
+- [x] 8. Checkpoint - Ensure backend tests pass
+  - Run all backend tests (unit and property tests)
+  - Verify Supabase connection works
+  - Test all API endpoints manually with cURL or Postman
+  - Ensure all tests pass, ask the user if questions arise
+
+- [ ] 9. Create admin interface HTML structure
+  - [x] 9.1 Create admin/index.html with form structure
+    - Add Tailwind CSS CDN link in head
+    - Create dark theme gradient background
+    - Create glassmorphism form panel with backdrop-blur
+    - Add form with fields: title (input), tags (input), iframeEmbed (textarea), thumbnail (file input)
+    - Add submit button
+    - Add message display area for success/error feedback
+    - Make layout responsive with Tailwind utilities
+    - _Requirements: 7.1, 7.6, 9.1, 9.2, 9.3, 9.4_
+  - [ ]\* 9.2 Write unit test for form elements presence
+    - Verify all required input fields exist in DOM
+    - _Requirements: 7.1_
+  - [ ]\* 9.3 Write unit test for Tailwind CSS CDN inclusion
+    - Verify HTML includes Tailwind CDN link
+    - _Requirements: 7.6_
+
+- [ ] 10. Implement admin interface JavaScript
+  - [x] 10.1 Create admin/app.js with form submission logic
+    - Get references to form elements
+    - Add submit event listener to form
+    - Prevent default form submission
+    - Log "admin_submit_attempt" to console
+    - Construct FormData with all form field values
+    - Parse tags from comma-separated string
+    - _Requirements: 7.2, 8.1_
+  - [x] 10.2 Implement API client in app.js
+    - Create function to POST FormData to /api/videos
+    - Include x-admin-key header from configuration
+    - Read API key from a config object or prompt user
+    - Handle fetch response (success and error cases)
+    - _Requirements: 7.3_
+  - [x] 10.3 Implement response handling in app.js
+    - On success (201): Display success message, log "admin_submit_success" with video ID, clear form
+    - On error (4xx/5xx): Display error message, log "admin_submit_error" with error message
+    - Update message display area with appropriate styling
+    - _Requirements: 7.4, 7.5, 8.2, 8.3_
+  - [ ]\* 10.4 Write property test for form data construction
+    - **Property 16: Form data construction**
+    - **Validates: Requirements 7.2**
+  - [ ]\* 10.5 Write property test for admin API request headers
+    - **Property 17: Admin API request headers**
+    - **Validates: Requirements 7.3**
+  - [ ]\* 10.6 Write property test for success feedback display
+    - **Property 18: Success feedback display**
+    - **Validates: Requirements 7.4**
+  - [ ]\* 10.7 Write property test for error feedback display
+    - **Property 19: Error feedback display**
+    - **Validates: Requirements 7.5**
+  - [ ]\* 10.8 Write property test for console logging completeness
+    - **Property 20: Console logging completeness**
+    - **Validates: Requirements 8.1, 8.2, 8.3**
+
+- [ ] 11. Create documentation
+  - [x] 11.1 Create backend/README.md with setup instructions
+    - Document prerequisites (Node.js, Supabase account)
+    - Document environment variable setup
+    - Document Supabase setup (create table, create storage bucket)
+    - Provide SQL schema for videos table
+    - Document installation steps (npm install)
+    - Document running the server (npm run dev)
+    - Include example cURL requests for all endpoints (GET, POST, DELETE)
+    - _Requirements: 10.2, 10.3, 10.5_
+  - [x] 11.2 Add inline code comments
+    - Add comments explaining iframe sanitization limitations
+    - Add comments explaining CORS configuration options
+    - Add comments explaining security considerations
+    - _Requirements: 4.1_
+
+- [x] 12. Final checkpoint - Integration testing
+  - Start backend server locally
+  - Open admin interface in browser
+  - Test complete flow: create video, verify in database, retrieve via API, delete video
+  - Verify all console logs appear correctly
+  - Test error cases (invalid inputs, missing API key)
+  - Ensure all tests pass, ask the user if questions arise
+
+## Notes
+
+- Tasks marked with `*` are optional and can be skipped for faster MVP
+- Each task references specific requirements for traceability
+- Property tests should use fast-check library with minimum 100 iterations
+- Backend uses TypeScript, admin interface uses vanilla JavaScript
+- Supabase free tier is sufficient for development and small-scale production
+- The admin interface API key should be configured before deployment (consider environment-specific builds)

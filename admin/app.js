@@ -97,6 +97,8 @@ form.addEventListener("submit", async (event) => {
       videoId,
     );
 
+    console.log("Thumbnail uploaded successfully:", thumbnailUrl);
+
     submitButton.textContent = "Creating video...";
 
     // Parse tags
@@ -109,12 +111,16 @@ form.addEventListener("submit", async (event) => {
       : [];
 
     // Create video via API
-    const video = await createVideo({
+    const videoData = {
       title: titleInput.value,
       iframeEmbed: iframeEmbedTextarea.value,
       tags: tagsArray,
       thumbnailUrl: thumbnailUrl,
-    });
+    };
+
+    console.log("Sending video data to API:", videoData);
+
+    const video = await createVideo(videoData);
 
     console.log("admin_submit_success", { videoId: video.id });
     displayMessage(`Video created successfully! ID: ${video.id}`, "success");

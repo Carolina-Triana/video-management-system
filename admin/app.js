@@ -1,8 +1,16 @@
 // Configuration
 const config = {
-  apiUrl: "http://localhost:3000/api/videos",
-  apiKey: "sb_publishable_TZ1KMuVU9YFdq0ciQNLn4Q_ZkqCaI7-", // Read from environment or prompt user in production
+  apiUrl: "https://video-management-system-rose.vercel.app/api/videos",
+  apiKey: "F1OnCPnluGAraq23EJRM29EKHL/yg5XN457umks0EbM=", // Production API key
 };
+
+// IMPORTANT NOTE: The serverless version on Vercel does NOT support file uploads (POST /api/videos)
+// File uploads require either:
+// 1. Using Supabase presigned URLs for direct client-side uploads
+// 2. Deploying the full Express backend to a traditional server (Railway, Render, etc.)
+//
+// Currently only GET and DELETE operations work on Vercel.
+// For creating videos with thumbnails, you need to run the backend locally or deploy to a traditional server.
 
 /**
  * Create a new video by posting FormData to the API

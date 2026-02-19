@@ -1,7 +1,7 @@
 // Configuration
 const config = {
   apiUrl: "https://video-management-system-rose.vercel.app/api/videos",
-  apiKey: "F1OnCPnluGAraq23EJRM29EKHL/yg5XN457umks0EbM=",
+  apiKey: "sb_publishable_TZ1KMuVU9YFdq0ciQNLn4Q_ZkqCaI7-",
   supabaseUrl: "https://cxntpvlfdplarpgkftvm.supabase.co",
   supabaseAnonKey: "sb_publishable_TZ1KMuVU9YFdq0ciQNLn4Q_ZkqCaI7-",
 };

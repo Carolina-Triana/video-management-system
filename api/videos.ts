@@ -6,9 +6,9 @@ const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Updated: 2024-12-19 - Now accepts JSON with thumbnailUrl instead of file upload
+// Updated: 2026-02-20 - Fixed CORS for multiple origins (force deploy v2)
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Enable CORS - Allow multiple origins
+  // Enable CORS - Allow multiple origins (only return the requesting origin)
   const allowedOrigins = [
     "https://carolina-triana.github.io",
     "https://web-videos-front.pages.dev",
@@ -49,6 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         thumbnailUrl: row.thumbnail_url,
         iframeEmbed: row.iframe_embed,
         tags: row.tags || [],
+        duration: row.duration || 0,
         createdAt: row.created_at,
       }));
 
@@ -78,6 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         thumbnailUrl: data.thumbnail_url,
         iframeEmbed: data.iframe_embed,
         tags: data.tags || [],
+        duration: data.duration || 0,
         createdAt: data.created_at,
       };
 
@@ -92,12 +94,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       try {
-        const { title, iframeEmbed, tags, thumbnailUrl } = req.body;
+        const { title, iframeEmbed, tags, thumbnailUrl, duration } = req.body;
 
         // Validate required fields
-        if (!title || !iframeEmbed || !thumbnailUrl) {
+        if (!title || !iframeEmbed || !thumbnailUrl || duration === undefined) {
           return res.status(400).json({
-            error: "Missing required fields: title, iframeEmbed, thumbnailUrl",
+            error:
+              "Missing required fields: title, iframeEmbed, thumbnailUrl, duration",
           });
         }
 
@@ -148,6 +151,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const createdAt = new Date().toISOString();
 
+        // Validate duration is a positive number
+        if (typeof duration !== "number" || duration < 0) {
+          return res.status(400).json({
+            error: "Duration must be a positive number (in seconds)",
+          });
+        }
+
         // Insert into database
         const { data, error: insertError } = await supabase
           .from("videos")
@@ -157,6 +167,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             thumbnail_url: thumbnailUrl,
             iframe_embed: sanitizedEmbed,
             tags: tagsArray,
+            duration: duration,
             created_at: createdAt,
           })
           .select()
@@ -169,6 +180,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           id: data.id,
           title: data.title,
           thumbnailUrl: data.thumbnail_url,
+          iframeEmbed: data.iframe_embed,
+          tags: data.tags || [],
+          duration: data.duration,
+          createdAt: data.created_at,
+        };
           iframeEmbed: data.iframe_embed,
           tags: data.tags || [],
           createdAt: data.created_at,

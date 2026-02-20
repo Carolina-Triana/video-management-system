@@ -21,6 +21,27 @@ function generateVideoId() {
   return id;
 }
 
+// Convert duration from MM:SS format to seconds
+function durationToSeconds(duration) {
+  const parts = duration.trim().split(":");
+  if (parts.length !== 2) {
+    throw new Error("Formato de duración inválido. Usa MM:SS (ejemplo: 4:05)");
+  }
+
+  const minutes = parseInt(parts[0], 10);
+  const seconds = parseInt(parts[1], 10);
+
+  if (isNaN(minutes) || isNaN(seconds)) {
+    throw new Error("Duración debe contener solo números");
+  }
+
+  if (seconds >= 60) {
+    throw new Error("Los segundos deben ser menores a 60");
+  }
+
+  return minutes * 60 + seconds;
+}
+
 // Upload thumbnail to Supabase Storage
 async function uploadThumbnail(file, videoId) {
   const timestamp = Date.now();
@@ -70,6 +91,7 @@ async function createVideo(videoData) {
 const form = document.getElementById("videoForm");
 const titleInput = document.getElementById("title");
 const iframeEmbedTextarea = document.getElementById("iframeEmbed");
+const durationInput = document.getElementById("duration");
 const thumbnailInput = document.getElementById("thumbnail");
 const submitButton = document.getElementById("submitButton");
 
@@ -77,14 +99,23 @@ const submitButton = document.getElementById("submitButton");
 function validateForm() {
   const isTitleValid = titleInput.value.trim().length >= 3;
   const isIframeValid = iframeEmbedTextarea.value.trim().length > 0;
+  const isDurationValid = /^([0-9]+):([0-5][0-9])$/.test(
+    durationInput.value.trim(),
+  );
   const isThumbnailValid = thumbnailInput.files.length > 0;
 
-  submitButton.disabled = !(isTitleValid && isIframeValid && isThumbnailValid);
+  submitButton.disabled = !(
+    isTitleValid &&
+    isIframeValid &&
+    isDurationValid &&
+    isThumbnailValid
+  );
 }
 
 // Add event listeners to validate form on input
 titleInput.addEventListener("input", validateForm);
 iframeEmbedTextarea.addEventListener("input", validateForm);
+durationInput.addEventListener("input", validateForm);
 thumbnailInput.addEventListener("change", validateForm);
 
 // Form submit handler
@@ -114,12 +145,16 @@ form.addEventListener("submit", async (event) => {
 
     submitButton.textContent = "Creando video...";
 
+    // Convert duration to seconds
+    const durationInSeconds = durationToSeconds(durationInput.value);
+
     // Create video via API
     const videoData = {
       title: titleInput.value,
       iframeEmbed: iframeEmbedTextarea.value,
       tags: [],
       thumbnailUrl: thumbnailUrl,
+      duration: durationInSeconds,
     };
 
     console.log("Sending video data to API:", videoData);

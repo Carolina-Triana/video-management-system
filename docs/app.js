@@ -69,10 +69,23 @@ async function createVideo(videoData) {
 // Get form elements
 const form = document.getElementById("videoForm");
 const titleInput = document.getElementById("title");
-const tagsInput = document.getElementById("tags");
 const iframeEmbedTextarea = document.getElementById("iframeEmbed");
 const thumbnailInput = document.getElementById("thumbnail");
 const submitButton = document.getElementById("submitButton");
+
+// Function to check if all required fields are filled
+function validateForm() {
+  const isTitleValid = titleInput.value.trim().length >= 3;
+  const isIframeValid = iframeEmbedTextarea.value.trim().length > 0;
+  const isThumbnailValid = thumbnailInput.files.length > 0;
+
+  submitButton.disabled = !(isTitleValid && isIframeValid && isThumbnailValid);
+}
+
+// Add event listeners to validate form on input
+titleInput.addEventListener("input", validateForm);
+iframeEmbedTextarea.addEventListener("input", validateForm);
+thumbnailInput.addEventListener("change", validateForm);
 
 // Form submit handler
 form.addEventListener("submit", async (event) => {
@@ -80,12 +93,12 @@ form.addEventListener("submit", async (event) => {
   console.log("admin_submit_attempt");
 
   submitButton.disabled = true;
-  submitButton.textContent = "Uploading thumbnail...";
+  submitButton.textContent = "Subiendo miniatura...";
 
   try {
     // Validate thumbnail
     if (thumbnailInput.files.length === 0) {
-      throw new Error("Please select a thumbnail image");
+      throw new Error("Por favor selecciona una imagen miniatura");
     }
 
     // Generate video ID
@@ -99,22 +112,13 @@ form.addEventListener("submit", async (event) => {
 
     console.log("Thumbnail uploaded successfully:", thumbnailUrl);
 
-    submitButton.textContent = "Creating video...";
-
-    // Parse tags
-    const tagsValue = tagsInput.value.trim();
-    const tagsArray = tagsValue
-      ? tagsValue
-          .split(",")
-          .map((t) => t.trim())
-          .filter((t) => t.length > 0)
-      : [];
+    submitButton.textContent = "Creando video...";
 
     // Create video via API
     const videoData = {
       title: titleInput.value,
       iframeEmbed: iframeEmbedTextarea.value,
-      tags: tagsArray,
+      tags: [],
       thumbnailUrl: thumbnailUrl,
     };
 
@@ -123,14 +127,16 @@ form.addEventListener("submit", async (event) => {
     const video = await createVideo(videoData);
 
     console.log("admin_submit_success", { videoId: video.id });
-    displayMessage(`Video created successfully! ID: ${video.id}`, "success");
+    displayMessage(`¡Video creado exitosamente! ID: ${video.id}`, "success");
     form.reset();
+    validateForm(); // Re-disable button after reset
   } catch (error) {
     console.log("admin_submit_error", { error: error.message });
     displayMessage(`Error: ${error.message}`, "error");
   } finally {
     submitButton.disabled = false;
-    submitButton.textContent = "Create Video";
+    submitButton.textContent = "Crear Video";
+    validateForm(); // Re-validate after submission
   }
 });
 

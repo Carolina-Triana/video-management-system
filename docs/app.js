@@ -146,7 +146,9 @@ form.addEventListener("submit", async (event) => {
     submitButton.textContent = "Creando video...";
 
     // Convert duration to seconds
+    console.log("Duration input value:", durationInput.value);
     const durationInSeconds = durationToSeconds(durationInput.value);
+    console.log("Duration in seconds:", durationInSeconds);
 
     // Create video via API
     const videoData = {

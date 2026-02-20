@@ -96,6 +96,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         const { title, iframeEmbed, tags, thumbnailUrl, duration } = req.body;
 
+        console.log("API received duration:", duration, "Type:", typeof duration);
+
         // Validate required fields
         if (!title || !iframeEmbed || !thumbnailUrl || duration === undefined) {
           return res.status(400).json({
@@ -152,11 +154,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const createdAt = new Date().toISOString();
 
         // Validate duration is a positive number
+        console.log("Validating duration:", duration, "Type:", typeof duration);
         if (typeof duration !== "number" || duration < 0) {
+          console.log("Duration validation FAILED");
           return res.status(400).json({
             error: "Duration must be a positive number (in seconds)",
           });
         }
+        console.log("Duration validation PASSED");
 
         // Insert into database
         const { data, error: insertError } = await supabase

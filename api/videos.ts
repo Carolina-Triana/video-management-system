@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS - Allow GitHub Pages
   res.setHeader(
     "Access-Control-Allow-Origin",
-    "https://carolina-triana.github.io/video-management-system/",
+    "https://carolina-triana.github.io",
   );
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-key");

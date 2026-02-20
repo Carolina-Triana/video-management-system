@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS - Allow GitHub Pages
   res.setHeader(
     "Access-Control-Allow-Origin",
-    "https://carolina-triana.github.io",
+    "https://carolina-triana.github.io/video-management-system/",
   );
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-key");
@@ -226,3 +226,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .json({ error: error.message || "Internal server error" });
   }
 }
+
+// Force redeploy - 2026-02-19

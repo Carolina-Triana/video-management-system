@@ -87,8 +87,15 @@ router.post(
   upload.single("thumbnail"),
   async (req: Request, res: Response) => {
     try {
-      const { title, iframeEmbed, tags, thumbnailUrl } = req.body;
+      const { title, iframeEmbed, tags, thumbnailUrl, duration } = req.body;
       const file = req.file;
+
+      console.log(
+        "Backend received duration:",
+        duration,
+        "Type:",
+        typeof duration,
+      );
 
       // Check if we have either file OR thumbnailUrl
       if (!file && !thumbnailUrl) {
@@ -173,6 +180,7 @@ router.post(
         thumbnailUrl: finalThumbnailUrl,
         iframeEmbed: sanitizedEmbed,
         tags: tagsArray,
+        duration: duration || 0,
         createdAt,
       });
 

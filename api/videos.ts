@@ -96,7 +96,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         const { title, iframeEmbed, tags, thumbnailUrl, duration } = req.body;
 
-        console.log("API received duration:", duration, "Type:", typeof duration);
+        console.log(
+          "API received duration:",
+          duration,
+          "Type:",
+          typeof duration,
+        );
 
         // Validate required fields
         if (!title || !iframeEmbed || !thumbnailUrl || duration === undefined) {
@@ -188,10 +193,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           iframeEmbed: data.iframe_embed,
           tags: data.tags || [],
           duration: data.duration,
-          createdAt: data.created_at,
-        };
-          iframeEmbed: data.iframe_embed,
-          tags: data.tags || [],
           createdAt: data.created_at,
         };
 

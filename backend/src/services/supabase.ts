@@ -24,6 +24,7 @@ export interface Video {
   thumbnailUrl: string;
   iframeEmbed: string;
   tags: string[];
+  duration: number;
   createdAt: string;
 }
 
@@ -33,6 +34,7 @@ export interface CreateVideoData {
   thumbnailUrl: string;
   iframeEmbed: string;
   tags: string[];
+  duration: number;
   createdAt: string;
 }
 
@@ -59,6 +61,7 @@ export async function getAllVideos(): Promise<Video[]> {
     thumbnailUrl: row.thumbnail_url,
     iframeEmbed: row.iframe_embed,
     tags: row.tags || [],
+    duration: row.duration || 0,
     createdAt: row.created_at,
   }));
 }
@@ -90,6 +93,7 @@ export async function getVideoById(id: string): Promise<Video | null> {
     thumbnailUrl: data.thumbnail_url,
     iframeEmbed: data.iframe_embed,
     tags: data.tags || [],
+    duration: data.duration || 0,
     createdAt: data.created_at,
   };
 }
@@ -100,6 +104,8 @@ export async function getVideoById(id: string): Promise<Video | null> {
  * @returns The created video record
  */
 export async function createVideo(data: CreateVideoData): Promise<Video> {
+  console.log("Creating video with duration:", data.duration);
+
   const { data: insertedData, error } = await supabase
     .from("videos")
     .insert({
@@ -108,6 +114,7 @@ export async function createVideo(data: CreateVideoData): Promise<Video> {
       thumbnail_url: data.thumbnailUrl,
       iframe_embed: data.iframeEmbed,
       tags: data.tags,
+      duration: data.duration,
       created_at: data.createdAt,
     })
     .select()
@@ -117,6 +124,8 @@ export async function createVideo(data: CreateVideoData): Promise<Video> {
     throw new Error(`Failed to create video: ${error.message}`);
   }
 
+  console.log("Video created with duration:", insertedData.duration);
+
   // Map database column names to camelCase
   return {
     id: insertedData.id,
@@ -124,6 +133,7 @@ export async function createVideo(data: CreateVideoData): Promise<Video> {
     thumbnailUrl: insertedData.thumbnail_url,
     iframeEmbed: insertedData.iframe_embed,
     tags: insertedData.tags || [],
+    duration: insertedData.duration || 0,
     createdAt: insertedData.created_at,
   };
 }
